@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- *(picker)* make the fullscreen width threshold configurable
+
 ## [0.1.1](https://github.com/mitos-editor/mitos/compare/v0.1.0...v0.1.1) - 2026-10-20
 
 ### Highlights

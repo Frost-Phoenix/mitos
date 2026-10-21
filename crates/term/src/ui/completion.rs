@@ -17,6 +17,21 @@ use view::{graphics::Rect, Editor};
 
 use std::cmp::Reverse;
 
+/// Builds the markdown shown in the completion documentation preview.
+///
+/// Some servers (for example ols) send an empty detail and put the whole
+/// signature in the documentation. An empty detail fenced as a code block
+/// would render as blank lines above the documentation.
+fn completion_markdown(lang: &str, detail: Option<&str>, doc: Option<&str>) -> String {
+    let detail = detail.map(str::trim).filter(|detail| !detail.is_empty());
+    match (detail, doc) {
+        (Some(detail), Some(doc)) => format!("```{lang}\n{detail}\n```\n{doc}"),
+        (Some(detail), None) => format!("```{lang}\n{detail}\n```"),
+        (None, Some(doc)) => doc.to_string(),
+        (None, None) => String::new(),
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct CompletionData {
     directory_style: Style,
@@ -352,13 +367,10 @@ impl Component for Completion {
         let language = doc.language_name().unwrap_or("");
 
         let markdowned = |lang: &str, detail: Option<&str>, doc: Option<&str>| {
-            let md = match (detail, doc) {
-                (Some(detail), Some(doc)) => format!("```{lang}\n{detail}\n```\n{doc}"),
-                (Some(detail), None) => format!("```{lang}\n{detail}\n```"),
-                (None, Some(doc)) => doc.to_string(),
-                (None, None) => String::new(),
-            };
-            Markdown::new(md, cx.editor.syn_loader.clone())
+            Markdown::new(
+                completion_markdown(lang, detail, doc),
+                cx.editor.syn_loader.clone(),
+            )
         };
 
         let mut markdown_doc = match option {
@@ -378,7 +390,12 @@ impl Component for Completion {
                     // TODO: set language based on doc scope
                     markdowned(language, option.item.detail.as_deref(), Some(contents))
                 }
-                None if option.item.detail.is_some() => {
+                None if option
+                    .item
+                    .detail
+                    .as_deref()
+                    .is_some_and(|d| !d.trim().is_empty()) =>
+                {
                     // TODO: set language based on doc scope
                     markdowned(language, option.item.detail.as_deref(), None)
                 }
@@ -444,6 +461,31 @@ impl Component for Completion {
         Widget::render(block, doc_area, surface);
 
         markdown_doc.render(markdown_area, surface, cx);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::completion_markdown;
+
+    #[test]
+    fn empty_detail_does_not_add_blank_lines_before_documentation() {
+        let docs = "```odin\nfmt.println :: proc(args: ..any)\n```\nPrints.";
+        assert_eq!(
+            completion_markdown("odin", Some(""), Some(docs)),
+            docs,
+            "empty details must not contribute an empty code block"
+        );
+        assert_eq!(completion_markdown("odin", Some(" \n"), Some(docs)), docs);
+        assert_eq!(completion_markdown("odin", Some(""), None), "");
+    }
+
+    #[test]
+    fn non_empty_detail_stays_in_a_language_fence() {
+        assert_eq!(
+            completion_markdown("rust", Some(" fn main() "), Some("docs")),
+            "```rust\nfn main()\n```\ndocs"
+        );
     }
 }
 use tui::buffer::BufferExt as _;

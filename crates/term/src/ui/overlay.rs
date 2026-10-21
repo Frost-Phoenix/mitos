@@ -6,8 +6,6 @@ use view::{
 
 use crate::compositor::{Component, Context, Cursor, Event, EventResult};
 
-pub const FULL_OVERLAID_MAX_WIDTH: u16 = 200;
-
 /// Contains a component placed in the center of the parent component
 pub struct Overlay<T> {
     /// Child component
@@ -16,20 +14,23 @@ pub struct Overlay<T> {
     pub calc_child_size: Box<dyn Fn(Rect) -> Rect>,
 }
 
-/// Surrounds the component with a margin of 5% on each side, and an additional 2 rows at the bottom
-pub fn overlaid<T>(content: T) -> Overlay<T> {
+/// Surrounds the component with a margin of 5% on each side, and an additional 2 rows at the
+/// bottom. Widths below `fullscreen_max_width` use the entire terminal instead.
+pub fn overlaid<T>(content: T, fullscreen_max_width: u16) -> Overlay<T> {
     Overlay {
         content,
-        calc_child_size: Box::new(|rect: Rect| {
-            let percentage = if rect.width < FULL_OVERLAID_MAX_WIDTH {
-                100
-            } else {
-                90
-            };
-            let content = rect.clip_bottom(2);
-            clip_rect_relative(content, percentage, percentage)
-        }),
+        calc_child_size: Box::new(move |rect: Rect| overlay_rect(rect, fullscreen_max_width)),
     }
+}
+
+fn overlay_rect(rect: Rect, fullscreen_max_width: u16) -> Rect {
+    let percentage = if rect.width < fullscreen_max_width {
+        100
+    } else {
+        90
+    };
+    let content = rect.clip_bottom(2);
+    clip_rect_relative(content, percentage, percentage)
 }
 
 fn clip_rect_relative(rect: Rect, percent_horizontal: u8, percent_vertical: u8) -> Rect {
@@ -94,5 +95,72 @@ impl<T: Component + 'static> Component for Overlay<T> {
 
     fn id(&self) -> Option<&'static str> {
         self.content.id()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn rect(width: u16, height: u16) -> Rect {
+        Rect {
+            x: 0,
+            y: 0,
+            width,
+            height,
+        }
+    }
+
+    #[test]
+    fn narrow_terminals_use_the_full_screen_overlay() {
+        assert_eq!(
+            overlay_rect(rect(199, 40), 200),
+            Rect {
+                x: 0,
+                y: 0,
+                width: 199,
+                height: 38,
+            }
+        );
+        assert_eq!(
+            overlay_rect(rect(80, 40), 81),
+            Rect {
+                x: 0,
+                y: 0,
+                width: 80,
+                height: 38,
+            }
+        );
+    }
+
+    #[test]
+    fn wide_terminals_keep_the_inset_overlay() {
+        assert_eq!(
+            overlay_rect(rect(200, 40), 200),
+            Rect {
+                x: 10,
+                y: 2,
+                width: 180,
+                height: 34,
+            }
+        );
+    }
+
+    #[test]
+    fn zero_threshold_preserves_the_old_inset_behavior() {
+        assert_eq!(
+            overlay_rect(rect(80, 40), 0),
+            Rect {
+                x: 4,
+                y: 2,
+                width: 72,
+                height: 34,
+            }
+        );
+    }
+
+    #[test]
+    fn overlay_always_clips_two_bottom_rows() {
+        assert_eq!(overlay_rect(rect(100, 24), 200).height, 22);
     }
 }

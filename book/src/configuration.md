@@ -115,6 +115,7 @@ For common examples, see [Configure Mitos](./editor.md).
 | `file-picker` | table | See below | File-picker and global-search traversal. See [`[editor.file-picker]`](#editorfile-picker). |
 | `file-explorer` | table | See below | File-explorer traversal. See [`[editor.file-explorer]`](#editorfile-explorer). |
 | `buffer-picker` | table | See below | Initial selection in the buffer picker. See [`[editor.buffer-picker]`](#editorbuffer-picker). |
+| `picker` | table | See below | Picker layout and fullscreen behavior. See [`[editor.picker]`](#editorpicker). |
 | `statusline` | table | See below | Statusline layout and labels. See [`[editor.statusline]`](#editorstatusline). |
 | `search` | table | See below | Search matching and wrap behavior. See [`[editor.search]`](#editorsearch). |
 | `lsp` | table | See below | Global LSP behavior. See [`[editor.lsp]`](#editorlsp). |
@@ -485,6 +486,25 @@ max-depth = 10
 | Key | Type / accepted values | Default | Description |
 | --- | --- | --- | --- |
 | `start-position` | `"current"` or `"previous"` | `"current"` | Initially select the current buffer or the previously focused buffer. |
+
+### `[editor.picker]`
+
+| Key | Type / accepted values | Default | Description |
+| --- | --- | --- | --- |
+| `fullscreen-max-width` | integer (columns) | `200` | Terminal width below which pickers fill the screen instead of using the inset overlay. |
+
+Pickers fill the screen when the terminal width is smaller than
+`fullscreen-max-width`; wider terminals use an inset overlay covering 90% of
+the screen. Set `0` to never make pickers fullscreen, or a value larger than
+the terminal width to always make them fullscreen.
+
+```toml
+[editor.picker]
+fullscreen-max-width = 0
+```
+
+At runtime, use `:set picker.fullscreen-max-width 0`. The path is relative to
+`editor`.
 
 ### `[editor.auto-pairs]`
 

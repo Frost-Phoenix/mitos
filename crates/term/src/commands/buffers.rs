@@ -71,7 +71,10 @@ fn close_selected_buffer(
 }
 
 pub(super) fn buffer_picker(cx: &mut Context) {
-    cx.push_layer(Box::new(overlaid(buffer_picker_for_editor(cx.editor))));
+    cx.push_layer(Box::new(overlaid(
+        buffer_picker_for_editor(cx.editor),
+        cx.editor.config().picker.fullscreen_max_width,
+    )));
 }
 
 fn buffer_picker_for_editor(editor: &Editor) -> Picker<BufferMeta, PathStyleConfig> {

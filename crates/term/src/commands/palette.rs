@@ -139,7 +139,10 @@ pub fn command_palette(cx: &mut Context) {
                 },
             )
             .with_title("Command Palette");
-            compositor.push(Box::new(overlaid(picker)));
+            compositor.push(Box::new(overlaid(
+                picker,
+                cx.editor.config().picker.fullscreen_max_width,
+            )));
         },
     ));
 }

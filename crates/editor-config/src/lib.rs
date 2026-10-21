@@ -251,6 +251,23 @@ pub struct FileExplorerConfig {
     pub git_exclude: bool,
 }
 
+/// Picker overlay configuration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
+pub struct PickerConfig {
+    /// Terminal widths below this many columns use the full-screen picker overlay.
+    /// Set to 0 to always use the inset overlay. Defaults to 200.
+    pub fullscreen_max_width: u16,
+}
+
+impl Default for PickerConfig {
+    fn default() -> Self {
+        Self {
+            fullscreen_max_width: 200,
+        }
+    }
+}
+
 fn serialize_alphabet<S>(alphabet: &[char], serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -322,6 +339,7 @@ pub struct Config {
     pub icons: bool,
     pub border_style: BorderStyle,
     pub file_picker: FilePickerConfig,
+    pub picker: PickerConfig,
     pub file_explorer: FileExplorerConfig,
     /// Configuration of the statusline elements
     pub statusline: StatusLineConfig,
@@ -1124,6 +1142,7 @@ impl Default for Config {
             icons: false,
             border_style: BorderStyle::default(),
             file_picker: FilePickerConfig::default(),
+            picker: PickerConfig::default(),
             file_explorer: FileExplorerConfig::default(),
             statusline: StatusLineConfig::default(),
             search: SearchConfig::default(),
@@ -1524,6 +1543,40 @@ mod tests {
             shapes
         );
         assert!(toml::from_str::<CursorShapeConfig>("unknown = 'bar'").is_err());
+    }
+
+    #[test]
+    fn picker_fullscreen_max_width_defaults_and_round_trips() {
+        assert_eq!(PickerConfig::default().fullscreen_max_width, 200);
+        assert_eq!(Config::default().picker.fullscreen_max_width, 200);
+        assert_eq!(
+            toml::from_str::<Config>("")
+                .unwrap()
+                .picker
+                .fullscreen_max_width,
+            200
+        );
+
+        let config: Config = toml::from_str("[picker]\nfullscreen-max-width = 0").unwrap();
+        assert_eq!(config.picker.fullscreen_max_width, 0);
+        let serialized = toml::to_string(&config).unwrap();
+        assert_eq!(toml::from_str::<Config>(&serialized).unwrap(), config);
+        assert_eq!(
+            toml::Value::try_from(&config).unwrap()["picker"]["fullscreen-max-width"].as_integer(),
+            Some(0)
+        );
+    }
+
+    #[test]
+    fn picker_fullscreen_max_width_rejects_wrong_types_and_unknown_keys() {
+        for value in ["-1", "'wide'", "true", "70000"] {
+            assert!(
+                toml::from_str::<Config>(&format!("[picker]\nfullscreen-max-width = {value}"))
+                    .is_err(),
+                "{value}"
+            );
+        }
+        assert!(toml::from_str::<Config>("[picker]\nfullscreen = 100").is_err());
     }
 
     #[test]

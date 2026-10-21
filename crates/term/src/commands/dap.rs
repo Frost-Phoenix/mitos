@@ -169,34 +169,38 @@ pub fn dap_launch(cx: &mut Context) {
         |item: &DebugTemplate, _| item.name.as_str().into(),
     )];
 
-    cx.push_layer(Box::new(overlaid(Picker::new(
-        cx.editor.redraw().clone(),
-        columns,
-        0,
-        templates,
-        (),
-        move |cx, template, _action| {
-            if template.completion.is_empty() {
-                if let Err(err) = start_for_document(cx, document, Some(&template.name), None, None)
-                {
-                    cx.editor.set_error(|| err.to_string());
+    cx.push_layer(Box::new(overlaid(
+        Picker::new(
+            cx.editor.redraw().clone(),
+            columns,
+            0,
+            templates,
+            (),
+            move |cx, template, _action| {
+                if template.completion.is_empty() {
+                    if let Err(err) =
+                        start_for_document(cx, document, Some(&template.name), None, None)
+                    {
+                        cx.editor.set_error(|| err.to_string());
+                    }
+                } else {
+                    let completions = template.completion.clone();
+                    let name = template.name.clone();
+                    let callback = Box::pin(async move {
+                        let call: Callback =
+                            Callback::EditorCompositor(Box::new(move |_editor, compositor| {
+                                let prompt =
+                                    debug_parameter_prompt(document, completions, name, Vec::new());
+                                compositor.push(Box::new(prompt));
+                            }));
+                        Ok(call)
+                    });
+                    cx.jobs.callback(callback);
                 }
-            } else {
-                let completions = template.completion.clone();
-                let name = template.name.clone();
-                let callback = Box::pin(async move {
-                    let call: Callback =
-                        Callback::EditorCompositor(Box::new(move |_editor, compositor| {
-                            let prompt =
-                                debug_parameter_prompt(document, completions, name, Vec::new());
-                            compositor.push(Box::new(prompt));
-                        }));
-                    Ok(call)
-                });
-                cx.jobs.callback(callback);
-            }
-        },
-    ))));
+            },
+        ),
+        cx.editor.config().picker.fullscreen_max_width,
+    )));
 }
 
 pub fn dap_restart(cx: &mut Context) {
@@ -468,18 +472,21 @@ pub fn dap_switch_session(cx: &mut Context) {
             item.parent.as_str().into()
         }),
     ];
-    cx.push_layer(Box::new(overlaid(Picker::new(
-        cx.editor.redraw().clone(),
-        columns,
-        0,
-        sessions,
-        (),
-        |cx, session, _action| {
-            if let Err(error) = cx.editor.select_debugger_session(session.id) {
-                cx.editor.set_error(|| error.to_string());
-            }
-        },
-    ))));
+    cx.push_layer(Box::new(overlaid(
+        Picker::new(
+            cx.editor.redraw().clone(),
+            columns,
+            0,
+            sessions,
+            (),
+            |cx, session, _action| {
+                if let Err(error) = cx.editor.select_debugger_session(session.id) {
+                    cx.editor.set_error(|| error.to_string());
+                }
+            },
+        ),
+        cx.editor.config().picker.fullscreen_max_width,
+    )));
 }
 
 pub fn dap_switch_thread(cx: &mut Context) {

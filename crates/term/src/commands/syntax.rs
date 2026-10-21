@@ -78,7 +78,10 @@ pub fn syntax_symbol_picker(cx: &mut Context) {
     .with_quicklist(|_editor, tag| tag.quicklist_entry())
     .truncate_start(false);
 
-    cx.push_layer(Box::new(overlaid(picker)));
+    cx.push_layer(Box::new(overlaid(
+        picker,
+        cx.editor.config().picker.fullscreen_max_width,
+    )));
 }
 
 pub fn syntax_workspace_symbol_picker(cx: &mut Context) {
@@ -175,7 +178,10 @@ pub fn syntax_workspace_symbol_picker(cx: &mut Context) {
     .with_quicklist(|_editor, tag| tag.quicklist_entry())
     .with_history_register(Some(reg))
     .truncate_start(false);
-    cx.push_layer(Box::new(overlaid(picker)));
+    cx.push_layer(Box::new(overlaid(
+        picker,
+        cx.editor.config().picker.fullscreen_max_width,
+    )));
 }
 
 fn structural_selection(cx: &mut Context, action: view::editing::syntax::SelectionAction) {

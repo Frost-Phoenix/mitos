@@ -462,6 +462,37 @@ fn composed_settings_round_trip_for_runtime_options() {
 }
 
 #[test]
+fn picker_fullscreen_max_width_settings_round_trip() {
+    assert_eq!(
+        Config::load_test("").editor.picker.fullscreen_max_width,
+        200
+    );
+
+    let config = Config::load_test("[editor.picker]\nfullscreen-max-width = 0");
+    assert_eq!(config.editor.picker.fullscreen_max_width, 0);
+
+    let settings = config.editor_settings();
+    let value = serde_json::to_value(&settings).unwrap();
+    assert_eq!(value["picker"]["fullscreen-max-width"], 0);
+    assert_eq!(
+        serde_json::from_value::<EditorSettings>(value).unwrap(),
+        settings
+    );
+
+    for setting in [
+        "fullscreen-max-width = -1",
+        "fullscreen-max-width = 'wide'",
+        "fullscreen-max-width = true",
+        "fullscreen = 120",
+    ] {
+        assert!(
+            Config::load_test_result(&format!("[editor.picker]\n{setting}")).is_err(),
+            "{setting}"
+        );
+    }
+}
+
+#[test]
 fn inline_blame_settings_round_trip_with_grouped_editor_settings() {
     use editor_config::InlineBlameShow;
 

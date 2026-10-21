@@ -58,7 +58,10 @@ impl Fixture {
             |_, _, _| {},
         );
         let mut compositor = Compositor::new(Rect::new(0, 0, 100, 30));
-        compositor.push(Box::new(overlaid(picker)));
+        compositor.push(Box::new(overlaid(
+            picker,
+            app.editor.config().picker.fullscreen_max_width,
+        )));
         Ok(Self {
             app,
             jobs: Jobs::new(),

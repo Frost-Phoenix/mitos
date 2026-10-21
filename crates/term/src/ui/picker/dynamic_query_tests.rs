@@ -68,12 +68,18 @@ async fn queued_queries_validate_picker_identity_and_generation() -> anyhow::Res
         original.handle_prompt_change(false);
         let mut handler = handler(&original, &jobs);
         handler.handle_event(query("old"), None);
-        compositor.push(Box::new(overlaid(original)));
+        compositor.push(Box::new(overlaid(
+            original,
+            app.editor.config().picker.fullscreen_max_width,
+        )));
         let callback = jobs.callbacks.recv().await.unwrap();
         match change {
             "replace" => {
                 compositor.pop();
-                compositor.push(Box::new(overlaid(picker(&app.editor))));
+                compositor.push(Box::new(overlaid(
+                    picker(&app.editor),
+                    app.editor.config().picker.fullscreen_max_width,
+                )));
             }
             "supersede" => {
                 handler.handle_event(query("new"), None);
@@ -118,7 +124,10 @@ async fn only_the_latest_queued_query_starts_a_provider() -> anyhow::Result<()> 
     picker.prompt.set_line("new".into(), &app.editor);
     picker.handle_prompt_change(false);
     let mut handler = handler(&picker, &jobs);
-    compositor.push(Box::new(overlaid(picker)));
+    compositor.push(Box::new(overlaid(
+        picker,
+        app.editor.config().picker.fullscreen_max_width,
+    )));
     handler.handle_event(query("old"), None);
     handler.handle_event(query("new"), None);
     let old = jobs.callbacks.recv().await.unwrap();
@@ -156,7 +165,10 @@ async fn queries_skipped_during_debounce_can_be_requested_again() -> anyhow::Res
     picker.prompt.set_line("new".into(), &app.editor);
     picker.handle_prompt_change(false);
     let mut handler = handler(&picker, &jobs);
-    compositor.push(Box::new(overlaid(picker)));
+    compositor.push(Box::new(overlaid(
+        picker,
+        app.editor.config().picker.fullscreen_max_width,
+    )));
     handler.handle_event(query("old"), None);
     let skipped = jobs.callbacks.recv().await.unwrap();
     jobs.handle_callback(
@@ -234,7 +246,10 @@ async fn editing_or_closing_a_picker_drops_its_running_provider() -> anyhow::Res
             Some(0),
             &jobs,
         );
-        compositor.push(Box::new(overlaid(picker)));
+        compositor.push(Box::new(overlaid(
+            picker,
+            app.editor.config().picker.fullscreen_max_width,
+        )));
         let callback = tokio::time::timeout(Duration::from_secs(5), jobs.callbacks.recv())
             .await?
             .unwrap();

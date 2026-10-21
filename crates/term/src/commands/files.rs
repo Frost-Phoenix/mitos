@@ -85,7 +85,10 @@ fn open_navigation_target(
         }
     };
     if path.is_dir() {
-        return Some(Box::new(overlaid(ui::file_picker(editor, path))));
+        return Some(Box::new(overlaid(
+            ui::file_picker(editor, path),
+            editor.config().picker.fullscreen_max_width,
+        )));
     }
     let binary = open_binary_externally
         && std::fs::File::open(&path)
@@ -126,7 +129,10 @@ pub(super) fn file_picker(cx: &mut Context) {
         return;
     }
     let picker = ui::file_picker(cx.editor, root);
-    cx.push_layer(Box::new(overlaid(picker)));
+    cx.push_layer(Box::new(overlaid(
+        picker,
+        cx.editor.config().picker.fullscreen_max_width,
+    )));
 }
 
 pub(super) fn file_picker_in_current_buffer_directory(cx: &mut Context) {
@@ -152,7 +158,10 @@ pub(super) fn file_picker_in_current_buffer_directory(cx: &mut Context) {
     };
 
     let picker = ui::file_picker(cx.editor, path);
-    cx.push_layer(Box::new(overlaid(picker)));
+    cx.push_layer(Box::new(overlaid(
+        picker,
+        cx.editor.config().picker.fullscreen_max_width,
+    )));
 }
 
 pub(super) fn file_picker_in_current_directory(cx: &mut Context) {
@@ -163,7 +172,10 @@ pub(super) fn file_picker_in_current_directory(cx: &mut Context) {
         return;
     }
     let picker = ui::file_picker(cx.editor, cwd);
-    cx.push_layer(Box::new(overlaid(picker)));
+    cx.push_layer(Box::new(overlaid(
+        picker,
+        cx.editor.config().picker.fullscreen_max_width,
+    )));
 }
 
 pub(super) fn file_explorer(cx: &mut Context) {
@@ -174,7 +186,10 @@ pub(super) fn file_explorer(cx: &mut Context) {
     }
 
     if let Ok(picker) = ui::file_explorer(root, cx.editor) {
-        cx.push_layer(Box::new(overlaid(picker)));
+        cx.push_layer(Box::new(overlaid(
+            picker,
+            cx.editor.config().picker.fullscreen_max_width,
+        )));
     }
 }
 
@@ -201,7 +216,10 @@ pub(super) fn file_explorer_in_current_buffer_directory(cx: &mut Context) {
     };
 
     if let Ok(picker) = ui::file_explorer(path, cx.editor) {
-        cx.push_layer(Box::new(overlaid(picker)));
+        cx.push_layer(Box::new(overlaid(
+            picker,
+            cx.editor.config().picker.fullscreen_max_width,
+        )));
     }
 }
 
@@ -214,7 +232,10 @@ pub(super) fn file_explorer_in_current_directory(cx: &mut Context) {
     }
 
     if let Ok(picker) = ui::file_explorer(cwd, cx.editor) {
-        cx.push_layer(Box::new(overlaid(picker)));
+        cx.push_layer(Box::new(overlaid(
+            picker,
+            cx.editor.config().picker.fullscreen_max_width,
+        )));
     }
 }
 
@@ -278,7 +299,10 @@ pub(super) mod typed {
                         move |editor: &mut Editor, compositor: &mut Compositor| {
                             let picker = ui::file_picker(editor, path.into_owned())
                                 .with_default_action(action);
-                            compositor.push(Box::new(overlaid(picker)));
+                            compositor.push(Box::new(overlaid(
+                                picker,
+                                editor.config().picker.fullscreen_max_width,
+                            )));
                         },
                     ));
                     Ok(call)

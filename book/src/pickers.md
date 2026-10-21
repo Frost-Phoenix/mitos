@@ -26,6 +26,17 @@ Press `Ctrl-q` to copy matched file locations into the [quicklist](./quicklist.m
 for navigation after closing the picker. To customize keys, see
 [Component keys](./remapping.md#component-keys).
 
+## Fullscreen pickers
+
+Pickers fill the screen when the terminal is narrower than 200 columns. Wider
+terminals use an inset overlay covering 90% of the screen.
+
+Set `editor.picker.fullscreen-max-width` to change the threshold. `0` restores
+always-inset pickers, while a value larger than the terminal width makes pickers
+always fullscreen. Change it for the current session with
+`:set picker.fullscreen-max-width 0`. See
+[`editor.picker`](./configuration.md#editorpicker).
+
 ## Filtering results
 
 Most pickers use fuzzy matching with [fzf search syntax](https://github.com/junegunn/fzf#search-syntax).

@@ -195,6 +195,7 @@ skip-levels = 1
 | <span id="editorinline-blame-section"></span><span id="format"></span>Inline Git blame | [Version control](./version-control.md#inline-blame) |
 | <span id="editorfile-picker-section"></span><span id="editorfile-explorer-section"></span>File navigation and ignore rules | [Pickers](./pickers.md#hidden-and-ignored-files) |
 | <span id="editorbuffer-picker-section"></span>Buffer picker | [Initial selection](./configuration.md#editorbuffer-picker) |
+| <span id="editorpicker-section"></span>Picker layout | [Fullscreen behavior](./configuration.md#editorpicker) |
 | <span id="editorauto-pairs-section"></span>Delimiter pairing | [Auto-pairs](./configuration.md#editorauto-pairs) |
 | <span id="editorfilesauto-save-section"></span>Saving and reloading | [Files, buffers, and splits](./files.md#changes-made-outside-mitos) |
 | <span id="editorsearch-section"></span>Search | [Search and replacement](./search.md) |
