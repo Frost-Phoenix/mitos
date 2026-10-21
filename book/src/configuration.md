@@ -120,6 +120,7 @@ For common examples, see [Configure Mitos](./editor.md).
 | `lsp` | table | See below | Global LSP behavior. See [`[editor.lsp]`](#editorlsp). |
 | `debugger` | table | See below | Runtime value display. See [`[editor.debugger]`](#editordebugger). |
 | `rulers` | array of integers | `[]` | Columns at which to draw rulers; a language may override this. |
+| `ruler-char` | string | `"┊"` | Character used to draw rulers. |
 | `whitespace` | table | See below | Visible whitespace rendering. See [`[editor.whitespace]`](#editorwhitespace). |
 | `breadcrumb` | table | See below | Breadcrumb navigation bar. See [`[editor.breadcrumb]`](#editorbreadcrumb). |
 | `indent-guides` | table | See below | Vertical indentation guides. See [`[editor.indent-guides]`](#editorindent-guides). |

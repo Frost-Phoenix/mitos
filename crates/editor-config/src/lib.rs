@@ -332,6 +332,8 @@ pub struct Config {
     pub debugger: DebuggerConfig,
     /// Column numbers at which to draw the rulers. Defaults to `[]`, meaning no rulers.
     pub rulers: Vec<u16>,
+    /// Character used to draw rulers. Defaults to `┊`.
+    pub ruler_char: String,
     #[serde(default)]
     pub whitespace: WhitespaceConfig,
     /// Persistently display breadcrumb along the top of each view, below any bufferline.
@@ -1130,6 +1132,7 @@ impl Default for Config {
             lsp: LspConfig::default(),
             debugger: DebuggerConfig::default(),
             rulers: Vec::new(),
+            ruler_char: "┊".to_owned(),
             whitespace: WhitespaceConfig::default(),
             breadcrumb: BreadcrumbConfig::default(),
             indent_guides: IndentGuidesConfig::default(),
@@ -1510,6 +1513,20 @@ mod tests {
         for value in ["'invalid'", "'none'", "42", "true"] {
             assert!(toml::from_str::<Config>(&format!("border-style = {value}")).is_err());
         }
+    }
+
+    #[test]
+    fn ruler_char_defaults_and_round_trips() {
+        assert_eq!(Config::default().ruler_char, "┊");
+        assert_eq!(toml::from_str::<Config>("").unwrap().ruler_char, "┊");
+
+        let config: Config = toml::from_str("ruler-char = '│'").unwrap();
+        assert_eq!(config.ruler_char, "│");
+        let serialized = toml::to_string(&config).unwrap();
+        assert_eq!(
+            toml::from_str::<Config>(&serialized).unwrap().ruler_char,
+            "│"
+        );
     }
 
     #[test]

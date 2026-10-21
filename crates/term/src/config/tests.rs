@@ -724,6 +724,7 @@ fn mixed_spellings_respect_precedence_deep_inheritance_and_array_replacement() {
     let global = r#"
             [editor]
             rulers = [80, 120]
+            ruler-char = "│"
             [editor.files.auto-save.after-delay]
             enable = true
             timeout = 1700
@@ -752,6 +753,7 @@ fn mixed_spellings_respect_precedence_deep_inheritance_and_array_replacement() {
     assert!(!config.editor.files.reload.poll.enable);
     assert_eq!(config.editor.files.reload.poll.interval, 4000);
     assert!(config.editor.rulers.is_empty());
+    assert_eq!(config.editor.ruler_char, "│");
     assert!(config.terminal.true_color);
     assert_eq!(config.terminal.launcher.unwrap().command, "tmux");
 }

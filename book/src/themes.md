@@ -354,7 +354,7 @@ These scopes are used for theming the editor interface:
 | `ui.text.info`                    | The key: command text in `ui.popup.info` boxes                                                 |
 | `ui.text.directory`               | Directory names in prompt completion                                                           |
 | `ui.text.symlink`                 | Symlink names in prompt completion                                                             |
-| `ui.virtual.ruler`                | Ruler columns (see the [`editor.rulers` config][editor-section])                               |
+| `ui.virtual.ruler`                | Ruler glyph foreground (see the [`editor.rulers` config][editor-section])                      |
 | `ui.virtual.trailing_whitespace`  | Trailing whitespace; falls back to `ui.virtual.whitespace`                                      |
 | `ui.virtual.whitespace`           | Visible whitespace characters                                                                  |
 | `ui.virtual.indent-guide`         | Vertical indent width guides                                                                   |
@@ -395,6 +395,9 @@ These scopes are used for theming the editor interface:
 | `diagnostic.deprecated`           | Diagnostics with deprecated tag (editing area)                                                 |
 | `diagnostic.spelling` | Spelling diagnostics in the editing area (falls back to the hint diagnostic style). |
 | `tabstop`                         | Snippet placeholder                                                                            |
+
+`ui.virtual.ruler` styles the foreground of the ruler glyph. Set
+`editor.ruler-char` to change the glyph itself; the default is `┊`.
 
 [editor-section]: ./configuration.md#editor
 [#2380]: https://github.com/helix-editor/helix/issues/2380

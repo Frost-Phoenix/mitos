@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- *(editor)* draw rulers with a configurable `ruler-char` (default `┊`) and
+  switch built-in themes to foreground ruler colors.
+
 ## [0.1.1](https://github.com/mitos-editor/mitos/compare/v0.1.0...v0.1.1) - 2026-10-20
 
 ### Highlights
