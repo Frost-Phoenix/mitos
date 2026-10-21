@@ -1,6 +1,6 @@
 //! Actions and defaults owned by the terminal components that execute them.
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 use ui_core::keymap::{Binding, Keymap};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
@@ -29,7 +29,7 @@ pub enum PromptAction {
     InsertRegister,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PickerAction {
     MoveUp,
@@ -50,9 +50,37 @@ pub enum PickerAction {
     Item(PickerItemAction),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+impl Serialize for PickerAction {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::Item(action) => action.serialize(serializer),
+            Self::MoveUp => serializer.serialize_str("move_up"),
+            Self::MoveDown => serializer.serialize_str("move_down"),
+            Self::PageUp => serializer.serialize_str("page_up"),
+            Self::PageDown => serializer.serialize_str("page_down"),
+            Self::MoveStart => serializer.serialize_str("move_start"),
+            Self::MoveEnd => serializer.serialize_str("move_end"),
+            Self::Cancel => serializer.serialize_str("cancel"),
+            Self::Accept => serializer.serialize_str("accept"),
+            Self::AcceptKeepOpen => serializer.serialize_str("accept_keep_open"),
+            Self::AcceptHorizontalSplit => serializer.serialize_str("accept_horizontal_split"),
+            Self::AcceptVerticalSplit => serializer.serialize_str("accept_vertical_split"),
+            Self::TogglePreview => serializer.serialize_str("toggle_preview"),
+            Self::PopulateQuicklist => serializer.serialize_str("populate_quicklist"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum PickerItemAction {
     CloseBuffer,
+    Create,
+    Delete,
+    Move,
+    Rename,
+    Copy,
+    YankPath,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
@@ -94,6 +122,7 @@ pub struct ComponentKeymaps {
     pub prompt: Keymap<PromptAction>,
     pub picker: Keymap<PickerAction>,
     pub buffer_picker: Keymap<PickerAction>,
+    pub file_explorer: Keymap<PickerAction>,
     pub menu: Keymap<MenuAction>,
     pub popup: Keymap<PopupAction>,
     pub hover: Keymap<PageAction>,
@@ -118,6 +147,7 @@ impl Default for ComponentKeymaps {
     fn default() -> Self {
         use MenuAction as M;
         use PickerAction as K;
+        use PickerItemAction as I;
         use PopupAction as O;
         use PromptAction as P;
         let pages = bindings(&[("A-p", PageAction::Previous), ("A-n", PageAction::Next)]);
@@ -143,6 +173,15 @@ impl Default for ComponentKeymaps {
             ("C-v", K::AcceptVerticalSplit),
             ("C-t", K::TogglePreview),
         ]);
+        let mut file_explorer = picker.clone();
+        file_explorer.merge(bindings(&[
+            ("A-n", K::Item(I::Create)),
+            ("A-x", K::Item(I::Delete)),
+            ("A-m", K::Item(I::Move)),
+            ("A-r", K::Item(I::Rename)),
+            ("A-c", K::Item(I::Copy)),
+            ("A-y", K::Item(I::YankPath)),
+        ]));
         Self {
             prompt: bindings(&[
                 ("esc", P::Cancel),
@@ -184,6 +223,7 @@ impl Default for ComponentKeymaps {
                 ("C-r", P::InsertRegister),
             ]),
             buffer_picker: picker.clone(),
+            file_explorer,
             picker,
             menu: bindings(&[
                 ("esc", M::Cancel),

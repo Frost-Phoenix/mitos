@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- *(file-explorer)* create, rename, move, copy, delete, and yank paths from the
+  file explorer, with configurable `keys.file-explorer` actions
+
 ## [0.1.1](https://github.com/mitos-editor/mitos/compare/v0.1.0...v0.1.1) - 2026-10-20
 
 ### Highlights

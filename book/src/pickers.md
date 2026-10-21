@@ -54,6 +54,25 @@ go to its parent. The query filters entries in the directory being displayed.
 
 Supported [images](./image-previews.md) also appear in the preview pane.
 
+The explorer can also change files without leaving the picker:
+
+| Keys | Action |
+| --- | --- |
+| `Alt-n` | Create a file, or a directory when the path ends with `/` |
+| `Alt-r` | Rename the selected entry |
+| `Alt-m` | Move the selected entry |
+| `Alt-c` | Copy the selected file |
+| `Alt-x` | Delete after confirmation |
+| `Alt-y` | Yank the selected path |
+
+Create, rename, move, copy, and delete open a prompt and keep the explorer,
+query, and nearest selected row in place. Delete only proceeds when you type
+`y`. The `../` row cannot be modified, delete targets must stay inside the
+explorer's directory, and an existing destination is rejected rather than
+overwritten. Yank writes the selected path to the default register without
+closing the explorer. Remap the actions under
+[`keys.file-explorer`](./remapping.md#component-keys).
+
 ## Hidden and ignored files
 
 The file picker and global search omit hidden and ignored files by default.

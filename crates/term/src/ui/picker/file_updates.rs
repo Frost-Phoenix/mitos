@@ -98,6 +98,14 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
         self
     }
 
+    /// Request a fresh listing after an action changed the filesystem.
+    pub(crate) fn request_file_refresh(&mut self) {
+        if let Some(updates) = &mut self.file_updates {
+            updates.stop();
+        }
+        self.redraw.request();
+    }
+
     pub(super) fn refresh_files(&mut self, editor: &Editor) {
         use oneshot::error::TryRecvError as ResultError;
 

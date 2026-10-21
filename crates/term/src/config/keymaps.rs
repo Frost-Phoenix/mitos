@@ -24,6 +24,26 @@ impl<'de> Deserialize<'de> for BufferPickerAction {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct FileExplorerAction(PickerAction);
+
+impl<'de> Deserialize<'de> for FileExplorerAction {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        use serde::de::IntoDeserializer;
+        let action = String::deserialize(deserializer)?;
+        let action = match action.as_str() {
+            "create" => PickerAction::Item(PickerItemAction::Create),
+            "delete" => PickerAction::Item(PickerItemAction::Delete),
+            "move" => PickerAction::Item(PickerItemAction::Move),
+            "rename" => PickerAction::Item(PickerItemAction::Rename),
+            "copy" => PickerAction::Item(PickerItemAction::Copy),
+            "yank_path" => PickerAction::Item(PickerItemAction::YankPath),
+            action => PickerAction::deserialize(action.into_deserializer())?,
+        };
+        Ok(Self(action))
+    }
+}
+
 /// User-facing `[keys]` table keeps editor and component schemas separate.
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
@@ -34,6 +54,7 @@ pub struct Keys {
     prompt: Keymap<PromptAction>,
     picker: Keymap<PickerAction>,
     buffer_picker: Keymap<BufferPickerAction>,
+    file_explorer: Keymap<FileExplorerAction>,
     menu: Keymap<MenuAction>,
     popup: Keymap<PopupAction>,
     hover: Keymap<PageAction>,
@@ -46,7 +67,7 @@ impl Keys {
         self,
         editor: &mut HashMap<Mode, KeyTrie>,
         components: &mut ComponentKeymaps,
-    ) -> Keymap<PickerAction> {
+    ) -> (Keymap<PickerAction>, Keymap<PickerAction>) {
         for (mode, keys) in [
             (Mode::Normal, self.normal),
             (Mode::Insert, self.insert),
@@ -68,7 +89,10 @@ impl Keys {
         components.hover.merge(self.hover);
         components.signature_help.merge(self.signature_help);
         components.blame.merge(self.blame);
-        self.buffer_picker.map_actions(|action| action.0)
+        (
+            self.buffer_picker.map_actions(|action| action.0),
+            self.file_explorer.map_actions(|action| action.0),
+        )
     }
 }
 
@@ -78,12 +102,27 @@ pub(super) fn resolve_keymaps(
     let mut editor = keymap::default();
     let mut components = ComponentKeymaps::default();
     let mut buffer_overrides = Keymap::default();
-    for keys in configured {
-        buffer_overrides.merge(keys.apply(&mut editor, &mut components));
+    let mut file_explorer_overrides = Keymap::default();
+    let mut file_explorer_extras = components.file_explorer.clone();
+    for key in components.picker.0.keys() {
+        file_explorer_extras.0.remove(key);
     }
-    // Resolve inheritance after both configuration layers: buffer-specific
+    for keys in configured {
+        let (buffer, file_explorer) = keys.apply(&mut editor, &mut components);
+        buffer_overrides.merge(buffer);
+        file_explorer_overrides.merge(file_explorer);
+    }
+    // Resolve inheritance after both configuration layers: component-specific
     // bindings take priority even over workspace changes to shared bindings.
     components.buffer_picker = components.picker.clone();
     components.buffer_picker.merge(buffer_overrides);
+    // Keep file-explorer-only defaults while following every shared picker
+    // binding, including keys that project configuration removed or rebound.
+    file_explorer_extras
+        .0
+        .retain(|key, _| !components.picker.0.contains_key(key));
+    components.file_explorer = components.picker.clone();
+    components.file_explorer.merge(file_explorer_extras);
+    components.file_explorer.merge(file_explorer_overrides);
     (editor, components)
 }

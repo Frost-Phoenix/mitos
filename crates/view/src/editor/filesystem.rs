@@ -174,6 +174,37 @@ impl Editor {
         Ok(())
     }
 
+    pub(crate) fn copy_path(&mut self, from: &Path, to: &Path) -> io::Result<()> {
+        let from = canonicalize(from);
+        let to = canonicalize(to);
+        if !self.prepare_resource_target(&to, ExistingTarget::Reject)? {
+            return Ok(());
+        }
+        self.ensure_path_not_writing(&from)?;
+        self.ensure_path_not_writing(&to)?;
+        let metadata = fs::metadata(&from)?;
+        if !metadata.is_file() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("Cannot copy non-file: {}", from.display()),
+            ));
+        }
+        fs::copy(&from, &to)?;
+
+        for ls in self.language_servers.iter_clients() {
+            if !ls.is_initialized() {
+                continue;
+            }
+            ls.did_create(&to, false);
+        }
+        if !self.file_watcher.is_watching(&to) {
+            self.language_servers
+                .file_event_handler
+                .file_changed(to, lsp::FileChangeType::CREATED);
+        }
+        Ok(())
+    }
+
     fn prepare_resource_target(&self, path: &Path, existing: ExistingTarget) -> io::Result<bool> {
         match fs::symlink_metadata(path) {
             Ok(_) => match existing {

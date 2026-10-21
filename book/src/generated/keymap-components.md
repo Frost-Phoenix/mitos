@@ -36,6 +36,30 @@
 | `` <C-q> `` | `` populate_quicklist `` |
 | `` <C-t> `` | `` toggle_preview `` |
 
+## File explorer
+
+| Key | Action |
+| --- | --- |
+| `` <ret> `` | `` accept `` |
+| `` <C-s> `` | `` accept_horizontal_split `` |
+| `` <A-ret> `` | `` accept_keep_open `` |
+| `` <C-v> `` | `` accept_vertical_split `` |
+| `` <C-c> ``, `` <esc> `` | `` cancel `` |
+| `` <A-c> `` | `` copy `` |
+| `` <A-n> `` | `` create `` |
+| `` <A-x> `` | `` delete `` |
+| `` <A-m> `` | `` move `` |
+| `` <C-n> ``, `` <tab> ``, `` <down> `` | `` move_down `` |
+| `` <end> `` | `` move_end `` |
+| `` <home> `` | `` move_start `` |
+| `` <up> ``, `` <C-p> ``, `` <S-tab> `` | `` move_up `` |
+| `` <C-d> ``, `` <pagedown> `` | `` page_down `` |
+| `` <C-u> ``, `` <pageup> `` | `` page_up `` |
+| `` <C-q> `` | `` populate_quicklist `` |
+| `` <A-r> `` | `` rename `` |
+| `` <C-t> `` | `` toggle_preview `` |
+| `` <A-y> `` | `` yank_path `` |
+
 ## Prompt
 
 | Key | Action |

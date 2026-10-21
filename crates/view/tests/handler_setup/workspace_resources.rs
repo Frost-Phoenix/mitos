@@ -99,6 +99,10 @@ async fn interactive_resource_operations_reject_existing_destinations() -> anyho
             from: source.clone(),
             to: target.clone(),
         },
+        FileOperation::Copy {
+            from: source.clone(),
+            to: target.clone(),
+        },
     ] {
         assert!(fixture.editor.request_file_operation(operation).is_err());
         assert_eq!(std::fs::read_to_string(&source)?, "source contents");
@@ -117,6 +121,31 @@ async fn interactive_resource_operations_reject_existing_destinations() -> anyho
         Some(stdx::path::canonicalize(&moved).as_path())
     );
     assert!(!moved.exists());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn interactive_copy_copies_files_to_new_destinations() -> anyhow::Result<()> {
+    let mut fixture = Fixture::new("original\n")?;
+    let source = fixture.dir.path().join("source.txt");
+    let target = fixture.dir.path().join("target.txt");
+    let directory = fixture.dir.path().join("directory");
+    std::fs::write(&source, "source contents")?;
+    std::fs::create_dir(&directory)?;
+
+    fixture.editor.request_file_operation(FileOperation::Copy {
+        from: source.clone(),
+        to: target.clone(),
+    })?;
+    assert_eq!(std::fs::read_to_string(&source)?, "source contents");
+    assert_eq!(std::fs::read_to_string(&target)?, "source contents");
+    assert!(fixture
+        .editor
+        .request_file_operation(FileOperation::Copy {
+            from: directory,
+            to: fixture.dir.path().join("copy"),
+        })
+        .is_err());
     Ok(())
 }
 

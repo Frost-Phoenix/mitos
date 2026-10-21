@@ -17,6 +17,7 @@ use crate::Editor;
 pub enum FileOperation {
     Create { path: PathBuf, is_dir: bool },
     Move { from: PathBuf, to: PathBuf },
+    Copy { from: PathBuf, to: PathBuf },
     Delete { path: PathBuf, recursive: bool },
 }
 
@@ -32,6 +33,10 @@ impl FileOperation {
                 from: canonicalize(from),
                 to: canonicalize(to),
             },
+            Self::Copy { from, to } => Self::Copy {
+                from: canonicalize(from),
+                to: canonicalize(to),
+            },
             Self::Delete { path, recursive } => Self::Delete {
                 path: canonicalize(path),
                 recursive,
@@ -42,7 +47,7 @@ impl FileOperation {
     fn paths(&self) -> Vec<&std::path::Path> {
         match self {
             Self::Create { path, .. } | Self::Delete { path, .. } => vec![path],
-            Self::Move { from, to } => vec![from, to],
+            Self::Move { from, to } | Self::Copy { from, to } => vec![from, to],
         }
     }
 
@@ -57,6 +62,7 @@ impl FileOperation {
             Self::Move { from, to } => server
                 .will_rename(from, to, from.is_dir())
                 .map(FutureExt::boxed),
+            Self::Copy { to, .. } => server.will_create(to, false).map(FutureExt::boxed),
             Self::Delete { path, .. } => server
                 .will_delete(path, path.is_dir())
                 .map(FutureExt::boxed),
@@ -69,6 +75,7 @@ impl FileOperation {
                 editor.create_path(&path, is_dir, ExistingTarget::Reject)
             }
             Self::Move { from, to } => editor.move_path(&from, &to, ExistingTarget::Reject),
+            Self::Copy { from, to } => editor.copy_path(&from, &to),
             Self::Delete { path, recursive } => editor.delete_path(&path, recursive),
         }
     }

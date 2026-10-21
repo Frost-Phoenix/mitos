@@ -82,6 +82,14 @@ C-n = "unbound" # Release this key to the picker's prompt.
 [keys.buffer-picker]
 C-x = "close_buffer" # Close the selected buffer and keep the picker open.
 
+[keys.file-explorer]
+A-n = "create" # Create a file, or a directory when the path ends with `/`.
+A-r = "rename" # Rename the selected entry in place.
+A-m = "move" # Move the selected entry.
+A-c = "copy" # Copy the selected file.
+A-x = "delete" # Delete after confirmation.
+A-y = "yank_path" # Yank the selected path to the default register.
+
 [keys.prompt]
 C-j = "accept"
 C-x = { h = "move_start", l = "move_end" }
@@ -130,6 +138,7 @@ belong in `keys.normal`, `keys.insert`, and `keys.select`.
 | `keys.prompt` | `accept`, `cancel`, `move_left`, `move_right`, `move_word_left`, `move_word_right`, `move_start`, `move_end`, `delete_backward`, `delete_forward`, `delete_word_backward`, `delete_word_forward`, `delete_to_start`, `delete_to_end`, `insert_word`, `insert_register`, `history_previous`, `history_next`, `complete_previous`, `complete_next`, `exit_selection` |
 | `keys.picker` | `accept`, `accept_keep_open`, `accept_horizontal_split`, `accept_vertical_split`, `cancel`, `move_up`, `move_down`, `move_start`, `move_end`, `page_up`, `page_down`, `toggle_preview`, `populate_quicklist` |
 | `keys.buffer-picker` | All `keys.picker` actions, plus `close_buffer` |
+| `keys.file-explorer` | All `keys.picker` actions, plus `create`, `delete`, `move`, `rename`, `copy`, `yank_path` |
 | `keys.menu` | `accept`, `cancel`, `move_up`, `move_down`, `page_up`, `page_down` |
 | `keys.popup` | `cancel`, `scroll_up`, `scroll_down` |
 | `keys.hover`, `keys.signature-help` | `previous`, `next` |
@@ -145,6 +154,13 @@ priority over shared picker bindings, including ones from project configuration.
 waits for pending saves and refuses to discard unsaved changes. After closing,
 the query is kept and a nearby row becomes selected. The action stops the
 current action list. It has no default binding.
+
+`keys.file-explorer` also inherits `keys.picker`. File-changing actions prompt
+for a path and keep the explorer open; the query and nearest selected row are
+preserved. Delete asks for confirmation and proceeds only when the input is
+exactly `y`. The synthetic `../` row cannot be modified. Destinations that
+already exist are rejected rather than overwritten. `yank_path` writes the
+selected path to the default register without changing the explorer.
 
 ## Special keys and modifiers
 

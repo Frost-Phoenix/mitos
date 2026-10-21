@@ -329,8 +329,10 @@ fn component_keys_reject_invalid_actions_shapes_and_contexts() {
         "[keys.unknown]\nj = 'move_down'",
         "[keys.picker]\nj = 'scroll_down'",
         "[keys.picker]\nC-x = 'close_buffer'",
+        "[keys.picker]\nC-x = 'create'",
         "[keys.menu]\nC-x = 'close_buffer'",
         "[keys.buffer-picker]\nC-x = 'scroll_down'",
+        "[keys.file-explorer]\nC-x = 'scroll_down'",
         "[keys.prompt]\nj = 'move_down'",
         "[keys.menu]\nj = ':write'",
         "[keys.popup]\nj = '@abc'",
@@ -399,6 +401,69 @@ fn buffer_picker_keys_inherit_shared_bindings_with_specific_overrides() {
     );
     let defaults = Config::default().component_keys;
     assert_eq!(defaults.buffer_picker, defaults.picker);
+}
+
+#[test]
+fn file_explorer_keys_inherit_shared_bindings_with_specific_overrides() {
+    use crate::keymap::component::{PickerAction as P, PickerItemAction};
+    use ui_core::keymap::{KeymapState, Lookup};
+
+    let global = r#"
+            [keys.picker]
+            C-j = 'move_down'
+            g = { j = 'move_up' }
+            [keys.file-explorer]
+            C-j = 'move_up'
+            C-x = ['move_down', 'create']
+            g = { x = 'delete' }
+        "#
+    .to_owned();
+    let local = r#"
+            [keys.picker]
+            C-j = 'move_start'
+            g = { j = 'move_end' }
+            [keys.file-explorer]
+            C-n = 'unbound'
+            C-p = 'no_op'
+        "#
+    .to_owned();
+    let config = Config::load(Ok(&global), Ok(local)).unwrap();
+    let mut state = KeymapState::default();
+    let keys = &config.component_keys.file_explorer;
+    let mut lookup = |key: &str| state.lookup(keys, key.parse().unwrap());
+    assert_eq!(lookup("C-j"), Lookup::Actions(&[P::MoveUp]));
+    assert_eq!(
+        lookup("C-x"),
+        Lookup::Actions(&[P::MoveDown, P::Item(PickerItemAction::Create)])
+    );
+    assert_eq!(lookup("C-n"), Lookup::Unbound);
+    assert_eq!(lookup("C-p"), Lookup::Actions(&[]));
+    assert_eq!(lookup("tab"), Lookup::Actions(&[P::MoveDown]));
+    assert_eq!(lookup("g"), Lookup::Pending);
+    assert_eq!(lookup("j"), Lookup::Actions(&[P::MoveEnd]));
+    assert_eq!(lookup("g"), Lookup::Pending);
+    assert_eq!(
+        lookup("x"),
+        Lookup::Actions(&[P::Item(PickerItemAction::Delete)])
+    );
+    assert_eq!(
+        state.lookup(&config.component_keys.picker, "C-j".parse().unwrap()),
+        Lookup::Actions(&[P::MoveStart])
+    );
+    assert_eq!(
+        state.lookup(&config.component_keys.picker, "C-x".parse().unwrap()),
+        Lookup::Unbound
+    );
+    let defaults = Config::default().component_keys;
+    assert_eq!(defaults.file_explorer.0.len(), defaults.picker.0.len() + 6);
+    assert_eq!(
+        state.lookup(&defaults.file_explorer, "A-n".parse().unwrap()),
+        Lookup::Actions(&[P::Item(PickerItemAction::Create)])
+    );
+    assert_eq!(
+        state.lookup(&defaults.file_explorer, "tab".parse().unwrap()),
+        Lookup::Actions(&[P::MoveDown])
+    );
 }
 
 #[test]
@@ -585,7 +650,7 @@ fn rejects_macros_in_command_sequences() {
 
 #[test]
 fn clipboard_settings_roundtrip_and_local_override_preserve_schema() {
-    use ::clipboard::ClipboardProvider;
+    use clipboard::ClipboardProvider;
     let global = "[editor]\nclipboard-provider = 'termcode'".to_owned();
     let local = "[editor]\nclipboard-provider = 'none'".to_owned();
     let config = Config::load(Ok(&global), Ok(local)).unwrap();

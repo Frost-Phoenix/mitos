@@ -577,6 +577,9 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
             PickerCallbackResult::Close => PickerClose::Close(None),
             PickerCallbackResult::CloseWithCallback(callback) => PickerClose::Close(Some(callback)),
             PickerCallbackResult::KeepOpen => PickerClose::KeepOpen,
+            PickerCallbackResult::KeepOpenWithCallback(callback) => {
+                PickerClose::KeepOpenWithCallback(callback)
+            }
             PickerCallbackResult::Replace {
                 options,
                 editor_data,
@@ -1100,10 +1103,12 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                 PickerAction::AcceptKeepOpen => {
                     if let Some(option) = self.selection() {
                         let result = (self.callback_fn)(ctx, option, self.default_action);
-                        if let PickerClose::Close(Some(callback)) =
-                            self.apply_callback_result(result, ctx.editor)
-                        {
-                            return EventResult::Consumed(Some(callback));
+                        match self.apply_callback_result(result, ctx.editor) {
+                            PickerClose::Close(Some(callback))
+                            | PickerClose::KeepOpenWithCallback(callback) => {
+                                return EventResult::Consumed(Some(callback));
+                            }
+                            _ => {}
                         }
                     }
                 }
@@ -1140,10 +1145,12 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                         {
                             ctx.editor.set_error(|| err.to_string());
                         }
-                        if let PickerClose::Close(callback) =
-                            self.apply_callback_result(callback_result, ctx.editor)
-                        {
-                            return close_fn(self, callback);
+                        match self.apply_callback_result(callback_result, ctx.editor) {
+                            PickerClose::Close(callback) => return close_fn(self, callback),
+                            PickerClose::KeepOpenWithCallback(callback) => {
+                                return EventResult::Consumed(Some(callback));
+                            }
+                            _ => {}
                         }
                     }
                 }
@@ -1157,10 +1164,12 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                         .map_or(PickerCallbackResult::Close, |option| {
                             (self.callback_fn)(ctx, option, action)
                         });
-                    if let PickerClose::Close(callback) =
-                        self.apply_callback_result(callback_result, ctx.editor)
-                    {
-                        return close_fn(self, callback);
+                    match self.apply_callback_result(callback_result, ctx.editor) {
+                        PickerClose::Close(callback) => return close_fn(self, callback),
+                        PickerClose::KeepOpenWithCallback(callback) => {
+                            return EventResult::Consumed(Some(callback));
+                        }
+                        _ => {}
                     }
                 }
                 PickerAction::TogglePreview => {
@@ -1171,10 +1180,12 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                         && let Some(item) = self.selection()
                     {
                         let result = handler(ctx, item, action);
-                        if let PickerClose::Close(callback) =
-                            self.apply_callback_result(result, ctx.editor)
-                        {
-                            return close_fn(self, callback);
+                        match self.apply_callback_result(result, ctx.editor) {
+                            PickerClose::Close(callback) => return close_fn(self, callback),
+                            PickerClose::KeepOpenWithCallback(callback) => {
+                                return EventResult::Consumed(Some(callback));
+                            }
+                            _ => {}
                         }
                     }
                     // The action may replace the asynchronous matcher contents.
@@ -1320,6 +1331,7 @@ impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I,
 
 enum PickerClose {
     KeepOpen,
+    KeepOpenWithCallback(compositor::Callback),
     Close(Option<compositor::Callback>),
 }
 
@@ -1327,6 +1339,8 @@ pub(crate) enum PickerCallbackResult<T, D> {
     Close,
     CloseWithCallback(compositor::Callback),
     KeepOpen,
+    /// Keep the picker open and schedule compositor work, such as opening a prompt.
+    KeepOpenWithCallback(compositor::Callback),
     Replace {
         options: Vec<T>,
         editor_data: D,

@@ -5,6 +5,7 @@ pub(crate) mod debugger_stack;
 pub(crate) mod debugger_variables;
 mod document;
 pub(crate) mod editor;
+mod file_explorer;
 mod gutter;
 pub(crate) mod highlights;
 mod icons;
@@ -29,6 +30,7 @@ use crate::compositor::Compositor;
 use crate::job::{self, Callback};
 pub use completion::Completion;
 pub use editor::EditorView;
+pub(crate) use file_explorer::file_explorer;
 pub(crate) use icons::icon_span;
 pub use markdown::Markdown;
 pub use menu::Menu;
@@ -41,16 +43,15 @@ use stdx::rope;
 pub use text::Text;
 use theme::icons::ICONS;
 use theme::Theme;
-use view::{
-    graphics::RectExt as _,
-    quicklist::{QuicklistEntry, QuicklistPosition, QuicklistTarget},
-    Editor,
-};
+use view::{graphics::RectExt as _, Editor};
 
 use tui::text::{Line, Span};
 
-use std::{borrow::Cow, path::Path, sync::Arc};
-use std::{error::Error, path::PathBuf};
+use std::{
+    error::Error,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 struct Utf8PathBuf {
     path: String,
@@ -335,115 +336,6 @@ pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
         }
     });
     picker
-}
-
-type FileExplorer = Picker<(PathBuf, bool), (PathBuf, Arc<Theme>, bool)>;
-
-pub fn file_explorer(root: PathBuf, editor: &Editor) -> Result<FileExplorer, std::io::Error> {
-    let options = directory_content(&root, &editor.config().file_explorer)?;
-
-    let columns = [PickerColumn::new(
-        "path",
-        |(path, is_dir): &(PathBuf, bool),
-         (_root, theme, show_icons): &(PathBuf, Arc<Theme>, bool)| {
-            let name = path.file_name();
-            let is_open = name.is_none() && *is_dir;
-            let name = name.map_or_else(|| Cow::Borrowed(".."), |name| name.to_string_lossy());
-            let directory_style = theme.get("ui.text.directory");
-
-            if *is_dir {
-                let mut spans = Vec::with_capacity(2);
-                if *show_icons {
-                    let icons = ICONS.load();
-                    if let Some(directory) = icons.fs().directory() {
-                        spans.push(icon_span(directory.get_with_style_or_default(
-                            &name,
-                            is_open,
-                            theme,
-                            directory_style,
-                        )));
-                    }
-                }
-                spans.push(Span::styled(format!("{name}/"), directory_style));
-                Line::from(spans).into()
-            } else {
-                let mut spans = Vec::with_capacity(2);
-                if *show_icons {
-                    let icons = ICONS.load();
-                    if let Some(file) = icons.fs().file() {
-                        spans.push(icon_span(file.get_with_style_or_default(path, theme)));
-                    }
-                }
-                spans.push(Span::raw(name.into_owned()));
-                Line::from(spans).into()
-            }
-        },
-    )];
-    let picker = Picker::new_with_callback_result(
-        editor.redraw().clone(),
-        columns,
-        0,
-        options,
-        (root, Arc::new(editor.theme.clone()), editor.config().icons),
-        move |cx, (path, is_dir): &(PathBuf, bool), action| {
-            if *is_dir {
-                let new_root = stdx::path::normalize(path);
-                return match directory_content(&new_root, &cx.editor.config().file_explorer) {
-                    Ok(options) => picker::PickerCallbackResult::Replace {
-                        options,
-                        editor_data: (
-                            new_root,
-                            Arc::new(cx.editor.theme.clone()),
-                            cx.editor.config().icons,
-                        ),
-                    },
-                    Err(err) => {
-                        cx.editor.set_error(|| err.to_string());
-                        picker::PickerCallbackResult::KeepOpen
-                    }
-                };
-            }
-
-            if let Err(err) = cx.editor.open(path, action) {
-                cx.editor.set_error(|| {
-                    if let Some(err) = err.source() {
-                        format!("{}", err)
-                    } else {
-                        format!("unable to open \"{}\"", path.display())
-                    }
-                });
-            }
-            picker::PickerCallbackResult::Close
-        },
-    )
-    .with_title("File Explorer")
-    .with_preview(|_editor, (path, _is_dir)| Some((path.as_path().into(), None)))
-    .with_quicklist(|_editor, (path, is_dir)| {
-        if *is_dir {
-            return None;
-        }
-
-        Some(QuicklistEntry {
-            target: QuicklistTarget::Path(path.clone()),
-            position: QuicklistPosition::None,
-        })
-    })
-    .with_file_updates(
-        editor,
-        |data| &data.0,
-        |_, editor, data, cancel| {
-            let config = editor.config().file_explorer.clone();
-            Box::pin(async move {
-                Ok(tokio::task::spawn_blocking(move || {
-                    directory_content_cancellable(&data.0, &config, || cancel.is_canceled())
-                })
-                .await??)
-            })
-        },
-    )
-    .with_item_key(|(path, _)| path.clone());
-
-    Ok(picker)
 }
 
 fn directory_content(
