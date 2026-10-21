@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- *(editing)* move selected lines up and down with `move_lines_up` and
+  `move_lines_down`, bound to `<C-k>` and `<C-j>`.
+
 ## [0.1.1](https://github.com/mitos-editor/mitos/compare/v0.1.0...v0.1.1) - 2026-10-20
 
 ### Highlights

@@ -8,6 +8,7 @@ use view::{
 use super::*;
 
 mod insert;
+mod move_lines;
 mod movement;
 mod replace;
 mod reverse_selection_contents;
