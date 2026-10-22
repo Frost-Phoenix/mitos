@@ -197,6 +197,15 @@ impl Icon {
     pub const fn with_no_padding(self) -> Self {
         self.with_padding(0, 0)
     }
+
+    #[inline]
+    #[must_use]
+    pub const fn with_no_left_padding(mut self) -> Self {
+        if let Some(padding) = &mut self.padding {
+            padding.left = 0;
+        }
+        self
+    }
 }
 
 impl Display for Icon {
@@ -1391,5 +1400,22 @@ mod test {
         let icons = Icons::default();
         assert!(icons.fs().file().unwrap().get("main.rs").is_some());
         assert!(icons.kind().get("function").is_some());
+    }
+
+    #[test]
+    fn removing_left_padding_keeps_right_padding() {
+        let icon = Icon::from("x").with_padding(1, 2);
+
+        let icon = icon.with_no_left_padding();
+
+        assert_eq!(icon.to_string(), "x  ");
+        assert_eq!(icon.width(), 3);
+    }
+
+    #[test]
+    fn removing_left_padding_from_an_unpadded_icon_is_a_no_op() {
+        let icon = Icon::from("x");
+
+        assert_eq!(icon.with_no_left_padding(), icon);
     }
 }
