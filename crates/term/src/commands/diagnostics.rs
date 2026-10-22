@@ -356,7 +356,7 @@ fn diag_picker(
                 Some(Severity::Error) => (icons.diagnostic().error(), styles.error),
                 _ => return None,
             };
-            Some(Span::styled(icon.to_string(), style))
+            Some(Span::styled(icon.with_no_left_padding().to_string(), style))
         }),
         ui::PickerColumn::new("source", |item: &PickerDiagnostic, _| {
             item.source.as_deref().unwrap_or("").into()

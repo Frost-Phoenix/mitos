@@ -285,7 +285,12 @@ pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
             data.icons
                 .then(|| ICONS.load().fs().file())
                 .flatten()
-                .map(|file| icon_span(file.get_with_style_or_default(item, &data.theme)))
+                .map(|file| {
+                    icon_span(
+                        file.get_with_style_or_default(item, &data.theme)
+                            .with_no_left_padding(),
+                    )
+                })
         }),
     ];
     let picker = Picker::new(
@@ -364,18 +369,24 @@ pub fn file_explorer(root: PathBuf, editor: &Editor) -> Result<FileExplorer, std
             let is_open = name.is_none();
             let name = name.map_or_else(|| Cow::Borrowed(".."), |name| name.to_string_lossy());
             icons.fs().directory().map(|directory| {
-                icon_span(directory.get_with_style_or_default(
-                    &name,
-                    is_open,
-                    theme,
-                    theme.get("ui.text.directory"),
-                ))
+                icon_span(
+                    directory
+                        .get_with_style_or_default(
+                            &name,
+                            is_open,
+                            theme,
+                            theme.get("ui.text.directory"),
+                        )
+                        .with_no_left_padding(),
+                )
             })
         } else {
-            icons
-                .fs()
-                .file()
-                .map(|file| icon_span(file.get_with_style_or_default(path, theme)))
+            icons.fs().file().map(|file| {
+                icon_span(
+                    file.get_with_style_or_default(path, theme)
+                        .with_no_left_padding(),
+                )
+            })
         }
     })];
     let picker = Picker::new_with_callback_result(

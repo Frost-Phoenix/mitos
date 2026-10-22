@@ -542,16 +542,20 @@ pub(super) fn render_preview_content(
                         let icons = ICONS.load();
                         let icon = if *is_dir {
                             icons.fs().directory().map(|directory_icons| {
-                                directory_icons.get_with_style_or_default(
-                                    &name,
-                                    path.file_name().is_none(),
-                                    &cx.editor.theme,
-                                    directory_style,
-                                )
+                                directory_icons
+                                    .get_with_style_or_default(
+                                        &name,
+                                        path.file_name().is_none(),
+                                        &cx.editor.theme,
+                                        directory_style,
+                                    )
+                                    .with_no_left_padding()
                             })
                         } else {
                             icons.fs().file().map(|file_icons| {
-                                file_icons.get_with_style_or_default(path, &cx.editor.theme)
+                                file_icons
+                                    .get_with_style_or_default(path, &cx.editor.theme)
+                                    .with_no_left_padding()
                             })
                         };
 

@@ -248,7 +248,7 @@ fn symbol_kind_icon(
         .load()
         .kind()
         .get(item.symbol.kind.as_str())
-        .map(ui::icon_span)
+        .map(|icon| ui::icon_span(icon.with_no_left_padding()))
 }
 
 fn symbol_name_cell<'a>(item: &'a SymbolInformationItem, data: &'a SymbolPickerData) -> Cell<'a> {
@@ -391,6 +391,21 @@ mod symbol_picker_tests {
             path.content.lines[0].spans[0].style,
             DEFAULT_THEME.get("ui.text.directory").into()
         );
+    }
+
+    #[test]
+    fn kind_icons_start_at_the_cell_origin() {
+        let item = symbol_information_item();
+        let data = SymbolPickerData {
+            show_icons: true,
+            theme: DEFAULT_THEME.clone(),
+        };
+
+        let icon = symbol_kind_icon(&item, &data).expect("function icons are bundled");
+
+        assert!(!icon.content.starts_with(' '));
+        let kind = symbol_kind_cell(&item, &data);
+        assert_eq!(kind.content.lines[0].spans[0].content.as_ref(), "function");
     }
 
     #[test]

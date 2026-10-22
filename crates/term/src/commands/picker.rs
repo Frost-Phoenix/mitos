@@ -61,10 +61,43 @@ impl PathStyleConfig {
         if !self.icons {
             return None;
         }
-        ICONS
-            .load()
-            .fs()
-            .file()
-            .map(|file| icon_span(file.get_with_style_or_default(path, self.theme.as_ref())))
+        ICONS.load().fs().file().map(|file| {
+            icon_span(
+                file.get_with_style_or_default(path, self.theme.as_ref())
+                    .with_no_left_padding(),
+            )
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+    use theme::Theme;
+
+    #[test]
+    fn path_picker_icons_start_at_the_cell_origin() {
+        let theme = Theme::default();
+        let config = PathStyleConfig {
+            theme: Arc::new(theme.clone()),
+            icons: true,
+            directory_style: theme.get("ui.text.directory"),
+            number_style: theme.get("constant.numeric.integer"),
+            colon_style: theme.get("punctuation"),
+        };
+
+        let icon = config
+            .icon(Some(Path::new("src/main.rs")))
+            .expect("file icons are bundled");
+        assert!(!icon.content.starts_with(' '));
+
+        let cell = config.stylize(Some(Path::new("src/main.rs")), None);
+        let spans = &cell.content.lines[0].spans;
+        assert_eq!(
+            spans[0].content.as_ref(),
+            format!("src{}", std::path::MAIN_SEPARATOR)
+        );
+        assert_eq!(spans[1].content.as_ref(), "main.rs");
     }
 }
