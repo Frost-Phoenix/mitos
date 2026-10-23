@@ -519,6 +519,32 @@ impl<'a> TextRenderer<'a> {
             .set_stringn(x, y + self.viewport.y, string, width, style);
     }
 
+    /// Draws a single-cell glyph at an absolute visual position while retaining the
+    /// background and modifiers already rendered in that cell.
+    pub fn overlay_grapheme(
+        &mut self,
+        grapheme: &str,
+        style: Style,
+        row: usize,
+        col: usize,
+    ) -> bool {
+        let Some(row) = row.checked_sub(self.offset.row) else {
+            return false;
+        };
+        let Some(col) = col.checked_sub(self.offset.col) else {
+            return false;
+        };
+        if row >= self.viewport.height as usize || col >= self.viewport.width as usize {
+            return false;
+        }
+
+        let x = self.viewport.x + col as u16;
+        let y = self.viewport.y + row as u16;
+        let style = self.surface[(x, y)].style().patch(style);
+        self.surface.set_stringn(x, y, grapheme, 1, style);
+        true
+    }
+
     /// Sets the style of an area **within the text viewport* this accounts
     /// both for the renderers vertical offset and its viewport
     pub fn set_style(&mut self, mut area: Rect, style: Style) {

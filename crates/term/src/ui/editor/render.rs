@@ -6,7 +6,9 @@ use super::super::{
     image::{render_placeholder, ImageDocumentView},
     layout::ApplicationLayout,
     statusline,
-    text_decorations::{self, Decoration, DecorationManager, InlineDiagnostics},
+    text_decorations::{
+        self, rulers::RulerGlyph, Decoration, DecorationManager, InlineDiagnostics,
+    },
     ProgressSpinners,
 };
 use diagnostics::NumberOrString;
@@ -375,7 +377,7 @@ impl PaneRenderer {
             );
         }
 
-        Self::render_rulers(editor, doc, view, inner, surface, theme);
+        Self::render_rulers(&config, doc, view, inner, surface, theme, &mut decorations);
 
         let primary_cursor = doc
             .selection(view.id)
@@ -498,26 +500,23 @@ impl PaneRenderer {
         }
     }
 
-    fn render_rulers(
-        editor: &Editor,
-        doc: &Document,
+    fn render_rulers<'a>(
+        config: &'a editor_config::Config,
+        doc: &'a Document,
         view: &View,
         viewport: Rect,
         surface: &mut Surface,
         theme: &Theme,
+        decorations: &mut DecorationManager<'a>,
     ) {
-        let config = editor.config();
         let editor_rulers = &config.rulers.columns;
         let ruler_theme = theme.get("ui.virtual.ruler");
-        let (character, ruler_style) = match config.rulers.style {
-            RulerStyle::Background => (
-                ' ',
-                Style::default().bg(ruler_theme.bg.unwrap_or(Color::Red)),
-            ),
-            RulerStyle::Glyph => (
-                config.rulers.character,
-                Style::default().fg(ruler_theme.fg.or(ruler_theme.bg).unwrap_or(Color::Red)),
-            ),
+        let character = config.rulers.character;
+        let ruler_style = match config.rulers.style {
+            RulerStyle::Background => Style::default().bg(ruler_theme.bg.unwrap_or(Color::Red)),
+            RulerStyle::Glyph => {
+                Style::default().fg(ruler_theme.fg.or(ruler_theme.bg).unwrap_or(Color::Red))
+            }
         };
 
         let rulers = doc
@@ -541,9 +540,27 @@ impl PaneRenderer {
             .filter(|&ruler| ruler < usize::from(viewport.width))
             .map(|ruler| viewport.x + ruler as u16);
 
-        for col in ruler_cols {
-            for y in viewport.top()..viewport.bottom() {
-                surface.set_stringn(col, y, character, 1, ruler_style);
+        match config.rulers.style {
+            RulerStyle::Background => {
+                for col in ruler_cols {
+                    surface.set_style(Rect::new(col, viewport.y, 1, viewport.height), ruler_style);
+                }
+            }
+            RulerStyle::Glyph => {
+                for col in ruler_cols {
+                    for y in viewport.top()..viewport.bottom() {
+                        surface.set_stringn(col, y, character, 1, ruler_style);
+                    }
+                }
+                // Whitespace rendering happens after this pass and would erase the
+                // glyphs. Repaint them over whitespace once each line is complete.
+                if !rulers.is_empty() {
+                    decorations.add_decoration(RulerGlyph::new(
+                        rulers,
+                        config.rulers.character,
+                        ruler_style,
+                    ));
+                }
             }
         }
     }

@@ -1,4 +1,4 @@
-use editor_config::{BufferLine, RulerStyle};
+use editor_config::{BufferLine, RulerStyle, WhitespaceRender, WhitespaceRenderValue};
 use term::application::Application;
 use theme::Theme;
 use tui::style::Color;
@@ -100,6 +100,50 @@ async fn rulers_cover_split_content_and_preserve_text() -> anyhow::Result<()> {
                 assert!(app.close().await.is_empty());
             }
         }
+    }
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn glyph_rulers_cover_spaces_tabs_and_newlines_without_hiding_text() -> anyhow::Result<()> {
+    for whitespace in [WhitespaceRenderValue::Trailing, WhitespaceRenderValue::All] {
+        let mut config = test_config();
+        config.editor.rulers.columns = vec![1, 3];
+        config.editor.rulers.style = RulerStyle::Glyph;
+        config.editor.whitespace.render = WhitespaceRender::Basic(whitespace);
+        let mut app = AppBuilder::new()
+            .with_config(config)
+            .with_input_text("#[a|]#b  cd\n\tx\n\nabcdefgh\n")
+            .with_lang_loader(language::syntax::Loader::default())
+            .build()?;
+        app.editor.theme = ruler_theme();
+        keys(&mut app, "<esc>").await?;
+        let (view, doc) = current_ref!(app.editor);
+        let area = view.inner_area(doc);
+        let buffer = app.terminal_backend().buffer();
+
+        // Rulers are one-based. Column 3 covers trailing/interior spaces, the
+        // tab's final cell, and empty space past the blank line's newline.
+        for y in [area.y, area.y + 1, area.y + 2, area.bottom() - 1] {
+            assert_eq!(
+                buffer[(area.x + 2, y)].symbol(),
+                "┊",
+                "at ({}, {y}) with {whitespace:?}",
+                area.x + 2
+            );
+        }
+        // Column 1 covers the blank line's newline and the tab's first cell.
+        for y in [area.y + 1, area.y + 2] {
+            assert_eq!(buffer[(area.x, y)].symbol(), "┊", "at ({}, {y})", area.x);
+        }
+        // Actual text still wins over the ruler.
+        assert_eq!(buffer[(area.x, area.y)].symbol(), "a");
+        assert_eq!(buffer[(area.x, area.y + 3)].symbol(), "a");
+        assert_eq!(buffer[(area.x + 2, area.y + 3)].symbol(), "c");
+        // Content following the ruler is preserved.
+        assert_eq!(buffer[(area.x + 4, area.y)].symbol(), "c");
+        assert_eq!(buffer[(area.x + 4, area.y + 1)].symbol(), "x");
+        assert!(app.close().await.is_empty());
     }
     Ok(())
 }
