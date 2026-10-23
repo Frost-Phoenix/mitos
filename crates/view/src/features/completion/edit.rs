@@ -94,6 +94,7 @@ pub(super) enum CompletionEdit {
 
 struct PreparedCompletion {
     savepoint: Arc<SavePoint>,
+    trigger_offset: usize,
     transaction: Transaction,
     snippet: Option<RenderedSnippet>,
     additional: Option<Transaction>,
@@ -155,18 +156,20 @@ impl Editor {
             .completions
             .active_completions
             .get(&item.provider())?;
-        let (transaction, snippet, additional) = match item {
+        let (transaction, snippet, additional, trigger_offset) = match item {
             CompletionItem::Lsp(item) => {
                 let server = self.language_servers.get_by_id(item.provider)?;
                 let encoding = server.offset_encoding();
                 let doc = self.document(session.trigger.doc)?;
                 let (text, selection) = context.savepoint.saved_state(doc).ok()?;
+                // Incomplete lists are refreshed against a newer savepoint than the
+                // session trigger, so accept at the cursor captured by this provider.
+                let trigger_offset = selection.primary().cursor(text.slice(..));
                 let (transaction, snippet) = lsp_item_to_transaction(
                     &text,
                     &selection,
                     &item.item,
                     encoding,
-                    session.trigger.pos,
                     self.config().completion.replace,
                     |snippet| self.snippet_context(doc, &text, &selection, snippet),
                 )?;
@@ -190,20 +193,22 @@ impl Editor {
                         }
                         additional
                     });
-                (transaction, snippet, additional)
+                (transaction, snippet, additional, trigger_offset)
             }
             CompletionItem::Snippet(item) => (
                 item.text.transaction.clone(),
                 Some(item.rendered.clone()),
                 None,
+                session.trigger.pos,
             ),
             CompletionItem::Path(TextCompletion { transaction, .. })
             | CompletionItem::Word(TextCompletion { transaction, .. }) => {
-                (transaction.clone(), None, None)
+                (transaction.clone(), None, None, session.trigger.pos)
             }
         };
         Some(PreparedCompletion {
             savepoint: context.savepoint.clone(),
+            trigger_offset,
             transaction,
             snippet,
             additional,
@@ -277,11 +282,11 @@ impl Editor {
         )?;
         let PreparedCompletion {
             savepoint,
+            trigger_offset,
             transaction,
             snippet,
             additional,
         } = prepared;
-        let trigger_offset = session.trigger.pos;
         let (view, doc) = current!(self);
         doc.restore(view.id, &savepoint)?;
         doc.commit_changes();
@@ -335,7 +340,6 @@ fn lsp_item_to_transaction(
     selection: &Selection,
     item: &lsp::CompletionItem,
     offset_encoding: OffsetEncoding,
-    trigger_offset: usize,
     replace_mode: bool,
     snippet_context: impl FnOnce(&Snippet) -> SnippetRenderCtx,
 ) -> Option<(Transaction, Option<RenderedSnippet>)> {
@@ -366,11 +370,6 @@ fn lsp_item_to_transaction(
             .insert_text
             .clone()
             .unwrap_or_else(|| item.label.clone());
-        // check that we are still at the correct savepoint
-        // we can still generate a transaction regardless but if the
-        // document changed (and not just the selection) then we will
-        // likely delete the wrong text (same if we applied an edit sent by the LS)
-        debug_assert!(primary_cursor == trigger_offset);
         (None, new_text)
     };
 
@@ -501,7 +500,6 @@ mod tests {
                 doc.selection(view.id),
                 &item,
                 OffsetEncoding::Utf16,
-                4,
                 replace_mode,
                 |_| {
                     doc.snippet_ctx(

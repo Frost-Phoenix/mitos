@@ -619,6 +619,38 @@ async fn resolved_items_and_incomplete_refreshes_expire_with_the_menu() -> anyho
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn incomplete_refreshes_without_text_edits_accept_at_the_filtered_cursor(
+) -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let mut f = Fixture::new(dir.path(), "😀 incomplete insert-only ap\n", &["alpha"]).await?;
+    f.trigger();
+    let (items, session) = f.completion_with_count(2).await?;
+    f.key("r").await?;
+    completion::request_incomplete_completion_list(&mut f.app.editor);
+    loop {
+        if matches!(
+            f.update().await?.apply(&mut f.app.editor),
+            Some(CompletionChange::Provider {
+                is_incomplete: true,
+                ..
+            })
+        ) {
+            break;
+        }
+    }
+    // The refreshed provider savepoint is at the filtered cursor, past the
+    // session trigger. Accepting items without a text edit must use it.
+    let item = items
+        .iter()
+        .find(|item| item.filter_text() == "apricot")
+        .context("missing apricot completion")?;
+    assert!(f.app.editor.accept_completion(&session, item)?);
+    assert_eq!(f.text(), "😀 incomplete insert-only apricot\n");
+    assert!(f.app.close().await.is_empty());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn shared_path_and_word_providers_work_without_lsp() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     std::fs::write(dir.path().join("apple.txt"), "")?;

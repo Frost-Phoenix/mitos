@@ -534,6 +534,7 @@ fn main() -> anyhow::Result<()> {
                 continue;
             }
             let snippet = text.contains("snippet");
+            let insert_only = text.contains("insert-only");
             let first_text = if snippet {
                 format!("{first}(${{1:value}})$0")
             } else {
@@ -544,11 +545,18 @@ fn main() -> anyhow::Result<()> {
             } else {
                 second.to_owned()
             };
+            let text_edit = |new_text: &str| {
+                if insert_only {
+                    Value::Null
+                } else {
+                    json!({"range": edit_range, "newText": new_text})
+                }
+            };
             let result = json!({"isIncomplete": text.contains("incomplete"), "items": [
                 {"label": first, "sortText": "2", "detail": args[1],
-                    "textEdit": {"range": edit_range, "newText": first_text}, "insertTextFormat": if snippet { 2 } else { 1 }},
+                    "textEdit": text_edit(&first_text), "insertText": first_text, "insertTextFormat": if snippet { 2 } else { 1 }},
                 {"label": second, "sortText": "1", "detail": args[1],
-                    "textEdit": {"range": edit_range, "newText": second_text}, "insertTextFormat": if snippet { 2 } else { 1 }}
+                    "textEdit": text_edit(&second_text), "insertText": second_text, "insertTextFormat": if snippet { 2 } else { 1 }}
             ]});
             respond(
                 &mut output,
